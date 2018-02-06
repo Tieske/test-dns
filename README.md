@@ -7,11 +7,12 @@ Usage:
 Run it on a system that has Kong installed (it requires some Kong dependencies).
 
 ```
-/usr/local/openresty/bin/resty ./test.lua <name> [type]
+/usr/local/openresty/bin/resty ./test.lua <name> [type] [interval]
 ```
 
 - `<name>` is the name to resolve (required)
 - `type` is the record type to look for; `A, SRV, CNAME` (optional)
+- `interval` is the interval between tries (optional). If provided, it will go in an endless loop until it hits an error.
 
 If type is not specified, it will search for multiple types.
 

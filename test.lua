@@ -17,6 +17,12 @@ local client = require "gs.dns.client"
 -- Get commandlie arguments
 local NAME = assert(arg[1], "no name to resolve specified on the command line")
 local TYPE = arg[2]
+local INTERVAL = arg[3]
+if not INTERVAL and type(tonumber(TYPE)) == "number" then
+  -- type was omitted, and interval was provided
+  INTERVAL = tonumber(TYPE)
+  TYPE = nil
+end
 if TYPE then
   TYPE = client["TYPE_"..tostring(TYPE):upper()]
   assert(TYPE, "The record type must be A, AAAA, CNAME, or SRV")
@@ -33,7 +39,7 @@ print(
 -- initialize dns client lib, same defaults as Kong
 client.init({
     order = {
-      "LAST",
+      --"LAST",
       "SRV",
       "A",
       "CNAME",
@@ -44,21 +50,40 @@ client.init({
     hosts = "/etc/hosts",
   })
 
--- Do a query
-local answer, err, try_list = client.resolve(NAME, { qtype = TYPE })
+local old_answer = "nothing yet"
+while true do
 
--- prep the try-list format
-try_list = "\n\t" .. tostring(try_list):gsub("\n", "\n\t")
+  -- Do a query
+  local answer, err, try_list = client.resolve(NAME, { qtype = TYPE })
+  if answer == old_answer then
+    -- we got the same record/table as before, so it from the cache, so nothing new
+  else
+    -- updated record recived
+    old_answer = answer
 
--- Pretty print the results
-local pretty = require("pl.pretty").write
-print(pretty({
-    answer = answer,
-    error = err,
-    try_list = try_list,
-  }))
+    -- prep the try-list format
+    try_list = "\n\t" .. tostring(try_list):gsub("\n", "\n\t")
 
--- return an error exit code if it failed
-if err then
-  os.exit(1)
+    -- Pretty print the results
+    local pretty = require("pl.pretty").write
+    print(pretty({
+        answer = answer,
+        error = err,
+        try_list = try_list,
+      }))
+
+    -- return an error exit code if it failed
+    if err then
+      os.exit(1)
+    end
+  end
+
+  if INTERVAL then
+    -- print amessage and wait for next INTERVAL to try again
+    print(("%.3f"):format(ngx.now()), " sleeping ", INTERVAL)
+    ngx.sleep(INTERVAL)
+  else
+    -- if no INTERVAL was set, we just exit
+    break
+  end
 end

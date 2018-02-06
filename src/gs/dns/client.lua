@@ -141,7 +141,7 @@ local cacheinsert = function(entry, qname, qtype)
     elseif entry.errcode and entry.errcode ~= 3 then
       -- an error, but no 'name error' (3)
       if (cachelookup(qname, qtype) or empty)[1] then
-        -- we still have a stale record with data, so we're not replacing that
+        -- we still have a stale record with data, so we're not replacing that with an error one
         return
       end
       ttl = badTtl
@@ -149,6 +149,10 @@ local cacheinsert = function(entry, qname, qtype)
 
     else
       -- empty or a 'name error' (3)
+      if (cachelookup(qname, qtype) or empty)[1] then
+        -- we still have a stale record with data, so we're not replacing that with an empty one
+        return
+      end
       ttl = emptyTtl
       key = qtype..":"..qname
     end
